@@ -73,20 +73,22 @@ export default function About() {
                         <h2 className="text-3xl font-semibold text-center text-gradient">Our Core Values</h2>
                         <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                             <div className="bg-white/80 backdrop-blur-sm p-6 rounded-lg shadow-lg">
-                                <h3 className="text-xl font-bold text-[#E80458]">Empowerment</h3>
-                                <p className="text-gray-700 mt-2">
+                                <h3 className="text-xl font-bold text-center bg-clip-text text-transparent bg-gradient-to-r from-[#EC6227] via-[#E80458] to-[#5900B3] w-max mx-auto">Empowerment</h3>
+                                <p className="text-gray-700 mt-2 text-center">
                                     We empower our users with knowledge and tools to make informed real estate decisions.
                                 </p>
                             </div>
                             <div className="bg-white/80 backdrop-blur-sm p-6 rounded-lg shadow-lg">
-                                <h3 className="text-xl font-bold text-[#E80458]">Transparency</h3>
-                                <p className="text-gray-700 mt-2">
+                                <h3 className="text-xl font-bold text-center bg-clip-text text-transparent bg-gradient-to-r from-[#EC6227] via-[#E80458] to-[#5900B3] w-max mx-auto">Transparency</h3>
+                                <p className="text-gray-700 mt-2 text-center">
                                     We believe in transparency, offering clear, unbiased information.
                                 </p>
                             </div>
                             <div className="bg-white/80 backdrop-blur-sm p-6 rounded-lg shadow-lg">
-                                <h3 className="text-xl font-bold text-[#E80458]">Community</h3>
-                                <p className="text-gray-700 mt-2">
+                                <h3 className="text-xl font-bold text-center bg-clip-text text-transparent bg-gradient-to-r from-[#EC6227] via-[#E80458] to-[#5900B3] w-max mx-auto">
+                                    Community
+                                </h3>
+                                <p className="text-gray-700 mt-2 text-center">
                                     Building a supportive community where people can share knowledge and seek advice.
                                 </p>
                             </div>
