@@ -19,9 +19,9 @@ interface HeroContentProps {
 const HeroSection = ({
     logo = RealtiLogo,
     headline = "Welcome to Realti",
-    motto = "We are an approachable real estate education platform",
+    motto = "A friendly and accessible platform dedicated to empowering you with real estate knowledge.",
     description_title = "Unlock the Tools, Knowledge, and Community You Need",
-    description = "Whether you're a first-time homebuyer or an experienced investor, Realti equips you with courses, tools, and expert insights to make informed real estate decisions.",
+    description = "Whether you're buying your first home or expanding your investment portfolio, Realti provides courses, tools, and expert insights to help you make confident real estate decisions.",
     ctaText = "Start Learning Now",
     onCtaClick = () => console.log("CTA clicked"),
 }: HeroContentProps) => {

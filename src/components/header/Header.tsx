@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
@@ -72,6 +72,11 @@ const resourcesItems = [
     },
 ]
 
+// Define a type for the profile
+type UserProfile = {
+    email: string;
+    // Add other properties if needed
+};
 
 const ListItem = React.forwardRef<
     React.ElementRef<"a">,
@@ -103,14 +108,27 @@ const Header = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const { user, setUser } = useAuth();
-
+    const [profile, setProfile] = useState<UserProfile | null>(null);
 
     const handleLogout = async () => {
         const { error } = await supabase.auth.signOut()
+        window.location.href = '/';
         if (error) {
             console.error('Error signing out:', error.message)
         }
     }
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            const { data, error } = await supabase.from('profiles').select('*').single();
+            if (error) {
+                console.error('Error fetching profile:', error.message);
+            } else {
+                setProfile(data);
+            }
+        };
+        fetchProfile();
+    }, []);
 
     const renderAuthButton = () => {
         if (user) {
@@ -130,21 +148,23 @@ const Header = () => {
                                 ) : (
                                     <User className="w-4 h-4" />
                                 )}
-                                {user.user_metadata.username}
+                                {profile?.email.split('@')[0]}
                             </span>
                         </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">
                         <DropdownMenuLabel>My Account</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>
-                            <User className="mr-2 h-4 w-4" />
-                            <span>Profile</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <Link href="/profile" passHref>
+                            <DropdownMenuItem>
+                                <User className="mr-2 h-4 w-4" />
+                                <span>Profile</span>
+                            </DropdownMenuItem>
+                        </Link>
+                        {/* <DropdownMenuItem>
                             <Settings className="mr-2 h-4 w-4" />
                             <span>Settings</span>
-                        </DropdownMenuItem>
+                        </DropdownMenuItem> */}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={handleLogout} className="text-red-600">
                             <LogOut className="mr-2 h-4 w-4" />

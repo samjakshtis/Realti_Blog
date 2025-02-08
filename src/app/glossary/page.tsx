@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { motion } from 'framer-motion';
@@ -8,60 +8,35 @@ import MainLayout from '@/components/layout/MainLayout';
 import Lottie from 'lottie-react';
 import { Info, Search } from 'lucide-react';
 import { ReactElement } from 'react';
+import { supabase } from '@/lib/supabase';
+
 interface GlossaryItem {
-    term: string;
-    definition: string;
-    icon: ReactElement;
+    Term: string;
+    Definition: string;
+    Icon: ReactElement;
 }
 
 const Glossery: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState<string>('');
+    const [glossaryData, setGlossaryData] = useState<GlossaryItem[]>([]);
 
-    const glossaryData: GlossaryItem[] = [
-        { term: "Appraisal", definition: "An estimate of the value of a property.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Assessment", definition: "The value of a property for taxation purposes.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Closing", definition: "The final step in the home buying process where ownership is transferred.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Deed", definition: "A legal document that transfers ownership of a property.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Equity", definition: "The difference between the market value of a property and the amount owed on it.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Escrow", definition: "A third-party account that holds funds until a transaction is complete.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Foreclosure", definition: "The process of taking possession of a property due to loan default.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Mortgage", definition: "A loan to purchase a property, using the property as collateral.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Title", definition: "A document that proves ownership of a property.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Zoning", definition: "Local laws that regulate how a property can be used.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Amortization", definition: "The process of gradually paying off a debt, such as a mortgage.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Broker", definition: "A licensed professional who represents buyers or sellers in a real estate transaction.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Commission", definition: "A fee paid to a broker or agent for their services in a real estate transaction.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Contingency", definition: "A condition that must be met before a real estate contract is binding.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Earnest Money", definition: "A deposit made by a buyer to show their commitment to purchasing a property.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Inspection", definition: "An examination of a property to identify any potential issues or defects.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Lien", definition: "A legal claim on a property for an unpaid debt or obligation.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Refinance", definition: "The process of replacing an existing mortgage with a new one, often to secure a better interest rate.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Survey", definition: "A detailed measurement of a property's boundaries and features.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Adjustable-Rate Mortgage", definition: "A mortgage with an interest rate that can change over time.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Annual Percentage Rate (APR)", definition: "The total cost of a loan, including interest and fees, expressed as a yearly rate.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Appraisal Fee", definition: "A fee paid for an appraisal of a property's value.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Closing Costs", definition: "Fees associated with the closing of a real estate transaction.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Credit Score", definition: "A numerical score that represents an individual's creditworthiness.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Down Payment", definition: "A portion of the purchase price paid upfront.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Fixed-Rate Mortgage", definition: "A mortgage with an interest rate that remains the same for the entire term.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Home Inspection", definition: "A thorough examination of a property's condition before purchase.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Interest Rate", definition: "The percentage of the loan amount charged as interest over a year.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Loan-to-Value (LTV) Ratio", definition: "The percentage of the property's value borrowed through a mortgage.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Mortgage Insurance", definition: "Insurance that protects the lender in case of borrower default.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Pre-Approval", definition: "A lender's estimate of how much a borrower can afford to spend on a property.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Pre-Qualification", definition: "An estimate of how much a borrower can afford to spend on a property, based on a brief review of their finances.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Private Mortgage Insurance (PMI)", definition: "Insurance that protects the lender in case of borrower default, typically required for mortgages with a high LTV ratio.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Property Tax", definition: "A tax levied on real estate by local governments.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Real Estate Agent", definition: "A licensed professional who represents buyers or sellers in a real estate transaction.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-        { term: "Title Insurance", definition: "Insurance that protects against losses due to defects in the title of a property.", icon: <Info className="w-6 h-6 text-gray-600 dark:text-gray-200" /> },
-    ];
+    useEffect(() => {
+        const fetchGlossary = async () => {
+            const { data, error } = await supabase.from('glossary').select('*');
+            if (error) console.error('Error fetching glossary:', error);
+            else setGlossaryData(data);
+        };
+        fetchGlossary();
+    }, []);
+
 
     const filteredGlossary = glossaryData.filter(item =>
-        item.term.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.definition.toLowerCase().includes(searchTerm.toLowerCase())
+        (item.Term && item.Term.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (item.Definition && item.Definition.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
     const highlightMatch = (text: string, term: string) => {
+        if (typeof text !== 'string') return text; // Ensure text is a string
         const parts = text.split(new RegExp(`(${term})`, 'gi'));
         return (
             <>
@@ -127,13 +102,13 @@ const Glossery: React.FC = () => {
                                 }}
                             >
                                 <div className="flex items-center justify-center mb-4">
-                                    {item.icon} {/* Displaying the unique icon for each card */}
+                                    {item.Icon} {/* Displaying the unique icon for each card */}
                                 </div>
                                 <h2 className="text-lg font-bold text-gray-800 dark:text-gray-200">
-                                    {highlightMatch(item.term, searchTerm)}
+                                    {highlightMatch(item.Term, searchTerm)}
                                 </h2>
                                 <p className="text-gray-700 dark:text-gray-400">
-                                    {item.definition}
+                                    {highlightMatch(item.Definition, searchTerm)}
                                 </p>
                             </motion.div>
                         ))}

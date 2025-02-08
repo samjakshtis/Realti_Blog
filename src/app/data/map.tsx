@@ -110,7 +110,8 @@ const MapWithGraphs = () => {
 
     return (
         <div className="flex flex-col items-center space-y-8">
-            <h2>Click on a County and See Insights</h2>
+            <h2 className="text-2xl font-bold">Click on a County and See Insights</h2>
+            <h3 className="text-sm text-gray-500">Click on a County and See Insights for the county and state. Some counties are not available.</h3>
 
             {/* Map Section */}
             <div className="flex flex-col items-center justify-center w-2/3 h-2/3">

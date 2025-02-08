@@ -5,7 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Bar } from "recharts"
+import {
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Legend,
+    ResponsiveContainer,
+} from "recharts"
 import MainLayout from "@/components/layout/MainLayout"
 
 interface LocationData {
@@ -17,12 +26,16 @@ interface LocationData {
 
 const RentVsBuyCalculator = () => {
     const [location, setLocation] = useState<LocationData | null>(null)
-    const [homePrice, setHomePrice] = useState(4000000)
+    const [homePrice, setHomePrice] = useState(1000000)
     const [monthlyRent, setMonthlyRent] = useState(2000)
     const [downPayment, setDownPayment] = useState(20)
     const [interestRate, setInterestRate] = useState(3.5)
     const [propertyTaxRate, setPropertyTaxRate] = useState(1.5)
     const [yearsToStay, setYearsToStay] = useState(7)
+    const [annualRentIncrease, setAnnualRentIncrease] = useState(3)
+    const [annualHomeAppreciation, setAnnualHomeAppreciation] = useState(3)
+    const [annualHomeMaintenance, setAnnualHomeMaintenance] = useState(3)
+    const [annualHomeInsurance, setAnnualHomeInsurance] = useState((homePrice * 0.5) / 100)
     const [chartData, setChartData] = useState<any[]>([])
     const [verdict, setVerdict] = useState<string>("")
 
@@ -47,57 +60,102 @@ const RentVsBuyCalculator = () => {
 
     useEffect(() => {
         calculateCosts()
-    }, [homePrice, monthlyRent, downPayment, interestRate, propertyTaxRate, yearsToStay])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [homePrice, monthlyRent, downPayment, interestRate, propertyTaxRate, yearsToStay, annualRentIncrease, annualHomeAppreciation])
+
+    // Calculate the total principal paid over the term using a simple amortization loop
+    const calculateAmortization = (loanAmount: number, interestRate: number, years: number) => {
+        const monthlyInterestRate = interestRate / 100 / 12
+        const numberOfPayments = years * 12
+        const monthlyPayment =
+            monthlyInterestRate > 0
+                ? (loanAmount * monthlyInterestRate * Math.pow(1 + monthlyInterestRate, numberOfPayments)) /
+                (Math.pow(1 + monthlyInterestRate, numberOfPayments) - 1)
+                : loanAmount / numberOfPayments
+
+        let remainingLoan = loanAmount
+        let totalPrincipalPaid = 0
+
+        for (let i = 0; i < numberOfPayments; i++) {
+            const interestPayment = remainingLoan * monthlyInterestRate
+            const principalPayment = monthlyPayment - interestPayment
+            totalPrincipalPaid += principalPayment
+            remainingLoan -= principalPayment
+        }
+
+        return totalPrincipalPaid
+    }
+
+    const calculateMonthlyMortgage = (loanAmount: number, interestRate: number, years: number) => {
+        const monthlyInterestRate = interestRate / 100 / 12
+        const numberOfPayments = years * 12
+        return monthlyInterestRate > 0
+            ? (loanAmount * monthlyInterestRate * Math.pow(1 + monthlyInterestRate, numberOfPayments)) /
+            (Math.pow(1 + monthlyInterestRate, numberOfPayments) - 1)
+            : loanAmount / numberOfPayments
+    }
 
     const calculateCosts = () => {
+        // Loan amount after down payment
         const loanAmount = homePrice * (1 - downPayment / 100)
+        const totalPrincipalPaid = calculateAmortization(loanAmount, interestRate, yearsToStay)
+
+        // Fixed monthly mortgage payment (doesn't change over time)
         const monthlyInterestRate = interestRate / 100 / 12
         const numberOfPayments = yearsToStay * 12
-
         const monthlyMortgage =
-            (loanAmount * monthlyInterestRate * Math.pow(1 + monthlyInterestRate, numberOfPayments)) /
-            (Math.pow(1 + monthlyInterestRate, numberOfPayments) - 1)
+            monthlyInterestRate > 0
+                ? (loanAmount * monthlyInterestRate * Math.pow(1 + monthlyInterestRate, numberOfPayments)) /
+                (Math.pow(1 + monthlyInterestRate, numberOfPayments) - 1)
+                : loanAmount / numberOfPayments
 
-        const monthlyPropertyTax = (homePrice * propertyTaxRate) / 100 / 12
-        const monthlyInsurance = (homePrice * 0.5) / 100 / 12 // Assuming 0.5% annual insurance rate
-
-        const monthlyOwnershipCost = monthlyMortgage + monthlyPropertyTax + monthlyInsurance
-
-        const data = []
         let totalRentCost = 0
         let totalBuyCost = 0
+        let data = []
 
         for (let year = 1; year <= yearsToStay; year++) {
-            totalRentCost += monthlyRent * 12
-            totalBuyCost += monthlyOwnershipCost * 12
+            // Exponential growth for rent: apply an annual increase rate.
+            const annualRent = monthlyRent * 12 * Math.pow(1 + annualRentIncrease / 100, year - 1)
+            totalRentCost += annualRent
 
-            // Assuming 3% annual appreciation for the home
-            const homeValue = homePrice * Math.pow(1.03, year)
-            const equity = homeValue - loanAmount + monthlyMortgage * 12 * year * 0.7 // Assuming 70% of mortgage payment goes to principal
+            // Update home value based on annual home appreciation
+            const homeValue = homePrice * Math.pow(1 + annualHomeAppreciation / 100, year)
+            // For buying costs, assume that while the mortgage payment remains fixed,
+            // property taxes and insurance scale with the appreciated home value.
+            const annualMortgageCost = monthlyMortgage * 12 // constant
+            const annualPropertyTax = (homeValue * propertyTaxRate) / 100
+            const annualInsurance = (homeValue * 0.5) / 100 // using a fixed 0.5% rate
+            const annualOwnershipCost = annualMortgageCost + annualPropertyTax + annualInsurance
+
+            totalBuyCost += annualOwnershipCost
+
+            // Calculate equity using a simplified amortization ratio.
+            // This represents the principal paid proportionally, plus home appreciation.
+            const equity = homeValue - (loanAmount - (totalPrincipalPaid * (year / yearsToStay)))
 
             data.push({
                 year,
                 rent: Math.round(totalRentCost),
-                buy: Math.round(totalBuyCost),
+                buy: Math.round(totalBuyCost - equity), // net cost after accounting for equity
                 equity: Math.round(equity),
+                netBuyCost: Math.round(totalBuyCost - equity),
             })
         }
 
-        // Add verdict calculation at the end
+        // Determine the crossover point at the final year.
         const finalData = data[data.length - 1]
         const rentTotal = finalData.rent
-        const buyTotal = finalData.buy
-        console.log(buyTotal, rentTotal)
-        setVerdict(buyTotal < rentTotal ? "buy" : "rent")
+        const netBuyTotal = finalData.netBuyCost
 
+        setVerdict(netBuyTotal < rentTotal ? "buy" : "rent")
         setChartData(data)
     }
 
     const formatDollar = (value: number) => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-            maximumFractionDigits: 0
+        return new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: "USD",
+            maximumFractionDigits: 0,
         }).format(value)
     }
 
@@ -120,7 +178,7 @@ const RentVsBuyCalculator = () => {
                                 id="homePrice"
                                 type="text"
                                 value={formatDollar(homePrice)}
-                                onChange={(e) => setHomePrice(Number(e.target.value.replace(/[^0-9.-]+/g, '')))}
+                                onChange={(e) => setHomePrice(Number(e.target.value.replace(/[^0-9.-]+/g, "")))}
                             />
                         </div>
                         <div>
@@ -129,7 +187,7 @@ const RentVsBuyCalculator = () => {
                                 id="monthlyRent"
                                 type="text"
                                 value={formatDollar(monthlyRent)}
-                                onChange={(e) => setMonthlyRent(Number(e.target.value.replace(/[^0-9.-]+/g, '')))}
+                                onChange={(e) => setMonthlyRent(Number(e.target.value.replace(/[^0-9.-]+/g, "")))}
                             />
                         </div>
                         <div>
@@ -169,6 +227,30 @@ const RentVsBuyCalculator = () => {
                             <span className="text-sm text-gray-500">{propertyTaxRate}%</span>
                         </div>
                         <div>
+                            <Label htmlFor="annualHomeMaintenance">Annual Home Maintenance (%)</Label>
+                            <Slider
+                                id="annualHomeMaintenance"
+                                min={0}
+                                max={10}
+                                step={0.1}
+                                value={[annualHomeMaintenance]}
+                                onValueChange={(value) => setAnnualHomeMaintenance(value[0])}
+                            />
+                            <span className="text-sm text-gray-500">{annualHomeMaintenance}%</span>
+                        </div>
+                        <div>
+                            <Label htmlFor="annualHomeInsurance">Annual Home Insurance ($)</Label>
+                            <Slider
+                                id="annualHomeInsurance"
+                                min={0}
+                                max={5000}
+                                step={1}
+                                value={[annualHomeInsurance]}
+                                onValueChange={(value) => setAnnualHomeInsurance(value[0])}
+                            />
+                            <span className="text-sm text-gray-500">{formatDollar(annualHomeInsurance)}</span>
+                        </div>
+                        <div>
                             <Label htmlFor="yearsToStay">Years to Stay</Label>
                             <Slider
                                 id="yearsToStay"
@@ -180,11 +262,35 @@ const RentVsBuyCalculator = () => {
                             />
                             <span className="text-sm text-gray-500">{yearsToStay} years</span>
                         </div>
+                        <div>
+                            <Label htmlFor="annualRentIncrease">Annual Rent Increase (%)</Label>
+                            <Slider
+                                id="annualRentIncrease"
+                                min={0}
+                                max={10}
+                                step={0.1}
+                                value={[annualRentIncrease]}
+                                onValueChange={(value) => setAnnualRentIncrease(value[0])}
+                            />
+                            <span className="text-sm text-gray-500">{annualRentIncrease}%</span>
+                        </div>
+                        <div>
+                            <Label htmlFor="annualHomeAppreciation">Annual Home Appreciation (%)</Label>
+                            <Slider
+                                id="annualHomeAppreciation"
+                                min={0}
+                                max={10}
+                                step={0.1}
+                                value={[annualHomeAppreciation]}
+                                onValueChange={(value) => setAnnualHomeAppreciation(value[0])}
+                            />
+                            <span className="text-sm text-gray-500">{annualHomeAppreciation}%</span>
+                        </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 my-8">
                         <div className="h-96 w-full">
                             <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 25 }}>
+                                <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 45 }}>
                                     <CartesianGrid strokeDasharray="3 3" />
                                     <XAxis
                                         dataKey="year"
@@ -192,24 +298,24 @@ const RentVsBuyCalculator = () => {
                                         textAnchor="end"
                                         height={60}
                                         label={{
-                                            value: 'Years',
-                                            position: 'bottom',
-                                            offset: 10
+                                            value: "Years",
+                                            position: "bottom",
+                                            offset: 10,
                                         }}
                                     />
                                     <YAxis
-                                        label={{
-                                            value: 'Cost ($)',
-                                            angle: -90,
-                                            position: 'insideLeft',
-                                            offset: -5
-                                        }}
+                                        // label={{
+                                        //     value: "Cost ($)",
+                                        //     angle: -90,
+                                        //     position: "insideLeft",
+                                        //     offset: -20,
+                                        // }}
                                         tickFormatter={(value) => formatDollar(value)}
                                     />
                                     <Tooltip formatter={(value, name) => [formatDollar(value as number), name]} />
-                                    <Legend />
+                                    <Legend verticalAlign="top" height={36} />
                                     <Line type="monotone" dataKey="rent" stroke="#E80458" name="Total Rent Cost" />
-                                    <Line type="monotone" dataKey="buy" stroke="#FF4D00" name="Total Buy Cost" />
+                                    <Line type="monotone" dataKey="buy" stroke="#FF4D00" name="Net Buy Cost" />
                                     <Line type="monotone" dataKey="equity" stroke="#5900B3" name="Home Equity" />
                                 </LineChart>
                             </ResponsiveContainer>
@@ -219,17 +325,17 @@ const RentVsBuyCalculator = () => {
                             {chartData.length > 0 && (
                                 <>
                                     <h3 className="text-xl font-bold text-center mb-4">
-                                        Based on your inputs, it makes more sense to{' '}
+                                        Based on your inputs, it makes more sense to{" "}
                                         <span className="text-primary uppercase">{verdict}</span>
                                     </h3>
                                     <ResponsiveContainer width="100%" height="85%">
                                         <LineChart
-                                            data={chartData.map(data => ({
+                                            data={chartData.map((data) => ({
                                                 year: data.year,
                                                 rent: data.rent,
-                                                buy: data.buy // Net cost after equity
+                                                buy: data.buy, // net cost after equity
                                             }))}
-                                            margin={{ top: 5, right: 30, left: 20, bottom: 25 }}
+                                            margin={{ top: 5, right: 30, left: 20, bottom: 45 }}
                                         >
                                             <CartesianGrid strokeDasharray="3 3" />
                                             <XAxis
@@ -238,22 +344,22 @@ const RentVsBuyCalculator = () => {
                                                 textAnchor="end"
                                                 height={60}
                                                 label={{
-                                                    value: 'Years',
-                                                    position: 'bottom',
-                                                    offset: 10
+                                                    value: "Years",
+                                                    position: "bottom",
+                                                    offset: 10,
                                                 }}
                                             />
                                             <YAxis
-                                                label={{
-                                                    value: 'Total Net Cost ($)',
-                                                    angle: -90,
-                                                    position: 'insideLeft',
-                                                    offset: -5
-                                                }}
+                                                // label={{
+                                                //     value: "Total Net Cost ($)",
+                                                //     angle: -90,
+                                                //     position: "insideLeft",
+                                                //     offset: -5,
+                                                // }}
                                                 tickFormatter={(value) => formatDollar(value)}
                                             />
                                             <Tooltip formatter={(value, name) => [formatDollar(value as number), name]} />
-                                            <Legend />
+                                            <Legend verticalAlign="top" height={36} />
                                             <Line type="monotone" dataKey="rent" stroke="#E80458" name="Total Rent Cost" strokeWidth={2} />
                                             <Line type="monotone" dataKey="buy" stroke="#FF4D00" name="Net Buy Cost" strokeWidth={2} />
                                         </LineChart>
@@ -261,6 +367,34 @@ const RentVsBuyCalculator = () => {
                                 </>
                             )}
                         </div>
+                    </div>
+
+                    {/* New Table for Metrics */}
+                    <div className="mt-8">
+                        <h2 className="text-2xl font-bold mb-4">Key Metrics</h2>
+                        <table className="min-w-full bg-white border border-gray-200">
+                            <thead>
+                                <tr>
+                                    <th className="py-2 px-4 border-b">Metric</th>
+                                    <th className="py-2 px-4 border-b">Value</th>
+                                </tr>
+                            </thead>
+                            <tbody className="text-center">
+                                <tr>
+                                    <td className="py-2 px-4 border-b">Down Payment</td>
+                                    <td className="py-2 px-4 border-b">{formatDollar(homePrice * (downPayment / 100))}</td>
+                                </tr>
+                                <tr>
+                                    <td className="py-2 px-4 border-b">Monthly Mortgage Payment</td>
+                                    <td className="py-2 px-4 border-b">{formatDollar(calculateMonthlyMortgage(homePrice * (1 - downPayment / 100), interestRate, yearsToStay))}</td>
+                                </tr>
+                                <tr>
+                                    <td className="py-2 px-4 border-b">Monthly Rent Payment</td>
+                                    <td className="py-2 px-4 border-b">{formatDollar(monthlyRent)}</td>
+                                </tr>
+                                {/* Add more metrics as needed */}
+                            </tbody>
+                        </table>
                     </div>
 
                     <div className="mt-12 bg-gray-50 p-8 rounded-lg">
@@ -271,16 +405,22 @@ const RentVsBuyCalculator = () => {
                                 <h3 className="text-lg font-semibold mb-3 text-primary">Cost Components</h3>
                                 <div className="space-y-4">
                                     <div>
-                                        <h4 className="font-medium text-gray-900">Monthly Mortgage Payment</h4>
-                                        <p className="text-gray-600">Calculated using the loan amount, interest rate, and loan term. This represents your primary monthly obligation when buying.</p>
+                                        <h4 className="font-medium text-gray-900">Mortgage Payment</h4>
+                                        <p className="text-gray-600">
+                                            Calculated using the loan amount, interest rate, and term. This remains constant, but other costs increase over time.
+                                        </p>
                                     </div>
                                     <div>
                                         <h4 className="font-medium text-gray-900">Property Taxes & Insurance</h4>
-                                        <p className="text-gray-600">Annual property taxes (based on local rates) and homeowner's insurance (estimated at 0.5% of home value annually) are included in monthly costs.</p>
+                                        <p className="text-gray-600">
+                                            Based on the appreciated home value (growing exponentially), these costs increase each year.
+                                        </p>
                                     </div>
                                     <div>
-                                        <h4 className="font-medium text-gray-900">Home Appreciation</h4>
-                                        <p className="text-gray-600">We assume a conservative 3% annual home appreciation rate to calculate future home value and equity.</p>
+                                        <h4 className="font-medium text-gray-900">Rent</h4>
+                                        <p className="text-gray-600">
+                                            Rent increases annually at the rate specified by the Annual Rent Increase slider.
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -290,15 +430,19 @@ const RentVsBuyCalculator = () => {
                                 <div className="space-y-4">
                                     <div>
                                         <h4 className="font-medium text-gray-900">Total Rent Cost (Pink Line)</h4>
-                                        <p className="text-gray-600">Shows cumulative rental payments over time, helping you visualize long-term rental expenses.</p>
+                                        <p className="text-gray-600">Cumulative rental payments, growing exponentially based on rent inflation.</p>
                                     </div>
                                     <div>
-                                        <h4 className="font-medium text-gray-900">Total Buy Cost (Orange Line)</h4>
-                                        <p className="text-gray-600">Represents the total cost of homeownership, including mortgage, taxes, and insurance payments.</p>
+                                        <h4 className="font-medium text-gray-900">Net Buy Cost (Orange Line)</h4>
+                                        <p className="text-gray-600">
+                                            Total homeownership expenses minus the accumulated equity. As equity builds, this net cost decreases.
+                                        </p>
                                     </div>
                                     <div>
                                         <h4 className="font-medium text-gray-900">Home Equity (Purple Line)</h4>
-                                        <p className="text-gray-600">Shows the building of wealth through principal payments and home appreciation over time.</p>
+                                        <p className="text-gray-600">
+                                            The growing value of the home (including principal paydown and appreciation) over time.
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -306,7 +450,7 @@ const RentVsBuyCalculator = () => {
 
                         <div className="mt-8 p-4 bg-blue-50 rounded-lg">
                             <p className="text-sm text-blue-800">
-                                <strong>Note:</strong> This calculator provides estimates based on the information entered and general assumptions. Market conditions, maintenance costs, and other factors may affect actual costs. Always consult with financial and real estate professionals before making housing decisions.
+                                <strong>Note:</strong> This calculator provides estimates based on general assumptions. Market conditions, maintenance costs, and other factors may affect actual costs. Always consult financial and real estate professionals before making any housing decisions.
                             </p>
                         </div>
                     </div>
@@ -317,4 +461,3 @@ const RentVsBuyCalculator = () => {
 }
 
 export default RentVsBuyCalculator
-
