@@ -3,7 +3,7 @@ import React from 'react';
 const RealEstateDevelopers = () => {
     return (
         <div className="coming-soon-container text-center mx-auto max-w-4xl py-10">
-            <h1 className="text-3xl font-bold mb-4">Real Estate Developers</h1>
+            <h1 className="text-3xl font-bold text-center bg-clip-text text-transparent bg-gradient-to-r from-[#EC6227] via-[#E80458] to-[#5900B3] w-max mx-auto mb-4">Real Estate Developers</h1>
             <h2 className="text-2xl font-semibold mb-6">Coming Soon</h2>
             <p className="mb-8">We're working hard to build out the best real estate developers database in the world. Stay tuned!</p>
             {/* <div className="subscribe-form flex flex-col items-center">

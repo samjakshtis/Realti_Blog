@@ -26,7 +26,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/context/AuthContext"
-import { User, Settings, LogOut } from "lucide-react"
+import { User, Settings, LogOut, BadgeCheck } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 
 const resourcesItems = [
@@ -75,6 +75,7 @@ const resourcesItems = [
 // Define a type for the profile
 type UserProfile = {
     email: string;
+    verified: boolean;
     // Add other properties if needed
 };
 
@@ -170,6 +171,14 @@ const Header = () => {
                             <LogOut className="mr-2 h-4 w-4" />
                             <span>Log out</span>
                         </DropdownMenuItem>
+                        {profile?.verified && (
+                            <DropdownMenuItem>
+                                <Link href="/articles">
+                                    <BadgeCheck className="mr-2 h-4 w-4" />
+                                    <span>Verify</span>
+                                </Link>
+                            </DropdownMenuItem>
+                        )}
                     </DropdownMenuContent>
                 </DropdownMenu>
             );

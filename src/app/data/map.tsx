@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ComposableMap, Geographies, Geography } from 'react-simple-maps';
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { supabase } from '@/lib/supabase';
 
 // Sample data for demonstration
 const sampleData = {
@@ -24,27 +25,55 @@ interface GraphData {
     data: any[];
 }
 
+
+// Function to fetch county name from Supabase
+const fetchCountyName = async (fipsCode: string) => {
+    const { data, error } = await supabase
+        .from('FIPS') // Replace with your table name
+        .select('name') // Replace with your column name for county
+        .eq('fips', fipsCode)
+        .single();
+
+    if (error) {
+        console.error('Error fetching county name:', error);
+        return 'Unknown County';
+    }
+
+    return data ? data.name : 'Unknown County';
+};
+
 const MapWithGraphs = () => {
     const [selectedState, setSelectedState] = useState<StateKeys | null>(null);
     const [selectedFips, setSelectedFips] = useState<string | null>(null);
     const [countyGraphs, setCountyGraphs] = useState<GraphData[]>([]);
     const [stateGraphs, setStateGraphs] = useState<GraphData[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [countyName, setCountyName] = useState<string | null>(null);
 
-    // Define the series we want to fetch
-    const seriesList = [
-        { id: 'MEDLISPRI', title: 'Median List Price' },
-        { id: 'AVELISPRI', title: 'Average List Price' },
-        { id: 'MEDLISPRIPERSQUFEE', title: 'Median List Price Per Square Foot' },
-        { id: 'MEDDAYONMAR', title: 'Median Days on Market' },
-        { id: 'NEWLISCOU', title: 'New Listings' },
-        { id: 'TOTLISCOU', title: 'Total Listings' },
+    // Define the series we want to fetch for counties
+    const countySeriesList = [
+        { id: 'MEDLISPRI', title: 'Median List Price', format: 'currency' },
+        { id: 'AVELISPRI', title: 'Average List Price', format: 'currency' },
+        { id: 'MEDLISPRIPERSQUFEE', title: 'Median List Price Per Square Foot', format: 'currency' },
+        { id: 'MEDDAYONMAR', title: 'Median Days on Market', format: 'number' },
+        { id: 'NEWLISCOU', title: 'New Listings', format: 'number' },
+        { id: 'TOTLISCOU', title: 'Total Listings', format: 'number' }, // For counties
+    ];
+
+    // Define the series we want to fetch for states
+    const stateSeriesList = [
+        { id: 'MEDLISPRI', title: 'Median List Price', format: 'currency' },
+        { id: 'AVELISPRI', title: 'Average List Price', format: 'currency' },
+        { id: 'MEDLISPRIPERSQUFEE', title: 'Median List Price Per Square Foot', format: 'currency' },
+        { id: 'MEDDAYONMAR', title: 'Median Days on Market', format: 'number' },
+        { id: 'NEWLISCOU', title: 'New Listings', format: 'number' },
+        { id: 'ACTLISCOU', title: 'Active Listings', format: 'number' }, // For states
     ];
 
     const fetchFredData = async (fipsCode: string, stateCode: string) => {
         setIsLoading(true);
         try {
-            const countyPromises = seriesList.map(async (series) => {
+            const countyPromises = countySeriesList.map(async (series) => {
                 const response = await fetch(`/api/fred-data?fips_code=${fipsCode}&is_state=false&series_id=${series.id}`);
                 const result = await response.json();
                 return {
@@ -56,7 +85,7 @@ const MapWithGraphs = () => {
                 };
             });
 
-            const statePromises = seriesList.map(async (series) => {
+            const statePromises = stateSeriesList.map(async (series) => {
                 const response = await fetch(`/api/fred-data?fips_code=${stateCode}&is_state=true&series_id=${series.id}`);
                 const result = await response.json();
                 return {
@@ -80,9 +109,13 @@ const MapWithGraphs = () => {
         }
     };
 
-    const handleStateClick = (countyName: string, fipsCode: string) => {
+    const handleStateClick = async (countyName: string, fipsCode: string) => {
         const cleanFips = fipsCode.replace(/\D/g, '');
-        const stateCode = cleanFips.slice(0, 2); // Extract the first two digits for state
+        const stateCode = cleanFips.slice(0, 2);
+
+        // Fetch county name from Supabase
+        const fetchedCountyName = await fetchCountyName(cleanFips);
+        setCountyName(fetchedCountyName);
 
         // Map FIPS state codes to state names (you can expand this list)
         const fipsToState: { [key: string]: string } = {
@@ -106,6 +139,10 @@ const MapWithGraphs = () => {
         setSelectedState(stateName as StateKeys); // Set state name instead of county
         setSelectedFips(cleanFips);
         fetchFredData(cleanFips, stateCode);
+    };
+
+    const formatValue = (value: number, format: string) => {
+        return format === 'currency' ? `$${value.toLocaleString()}` : value.toLocaleString();
     };
 
     return (
@@ -144,7 +181,7 @@ const MapWithGraphs = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* County Graphs Column */}
                         <div className="space-y-6">
-                            <h2 className="text-2xl font-bold mb-4">{selectedState} County Data</h2>
+                            <h2 className="text-2xl font-bold mb-4">{countyName || 'County'} Data</h2>
                             {countyGraphs.map((graph, index) => (
                                 <div key={index} className="bg-white p-6 rounded-lg shadow-lg">
                                     <h3 className="text-xl font-semibold mb-4">{graph.title}</h3>
@@ -163,8 +200,9 @@ const MapWithGraphs = () => {
                                                 />
                                                 <YAxis
                                                     domain={[0, Math.max(...graph.data.map((d: any) => parseFloat(d.value))) + 100]}
+                                                    tickFormatter={(value) => formatValue(value, countySeriesList[index].format)}
                                                 />
-                                                <Tooltip />
+                                                <Tooltip formatter={(value) => formatValue(Number(value), countySeriesList[index].format)} />
                                                 <Legend />
                                                 <Line
                                                     type="monotone"
@@ -201,8 +239,9 @@ const MapWithGraphs = () => {
                                                 />
                                                 <YAxis
                                                     domain={[0, Math.max(...graph.data.map((d: any) => parseFloat(d.value))) + 100]}
+                                                    tickFormatter={(value) => formatValue(value, stateSeriesList[index].format)}
                                                 />
-                                                <Tooltip />
+                                                <Tooltip formatter={(value) => formatValue(Number(value), stateSeriesList[index].format)} />
                                                 <Legend />
                                                 <Line
                                                     type="monotone"

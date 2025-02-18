@@ -466,13 +466,15 @@ export default function SupportPage() {
                 </div>
 
                 {/* Shopify Buy Buttons */}
-                <div id='product-component-1738868472176'></div>
-                <div id='product-component-1738869298377'></div>
-                <div id='product-component-1738869331104'></div>
+                <div className="flex justify-between">
+                    <div id='product-component-1738868472176'></div>
+                    <div id='product-component-1738869298377'></div>
+                    <div id='product-component-1738869331104'></div>
+                </div>
 
                 {/* Mission Impact Section */}
                 <div className="mt-16 opacity-90 backdrop-blur-sm rounded-lg p-8 border border-gray-800">
-                    <h2 className="text-3xl font-bold mb-6 text-center">Your Support Makes a Difference</h2>
+                    <h2 className="text-3xl font-bold text-center bg-clip-text text-transparent bg-gradient-to-r from-[#EC6227] via-[#E80458] to-[#5900B3] w-max mx-auto mb-6">Your Support Makes a Difference</h2>
                     <div className="grid md:grid-cols-3 gap-8">
                         <div className="text-center">
                             <h3 className="text-xl font-semibold mb-2">Educational Content</h3>
