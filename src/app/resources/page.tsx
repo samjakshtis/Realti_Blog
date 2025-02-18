@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card } from '@/components/ui/card';
+import { supabase } from '@/lib/supabase';
 
 // Add interface for Card props
 interface CardProps {
@@ -10,14 +11,31 @@ interface CardProps {
     description: string;
 }
 
+// Define an interface for the article data
+interface Article {
+    title: string;
+    description: string;
+    image: string;
+    link: string;
+}
+
 export default function Resources() {
     const [activeTab, setActiveTab] = useState('articles');
+    const [articles, setArticles] = useState<Article[]>([]);
 
-    const articlesData = [
-        { title: "Article 1", description: "Description of Article 1" },
-        { title: "Article 2", description: "Description of Article 2" },
-        { title: "Article 3", description: "Description of Article 3" },
-    ];
+    useEffect(() => {
+        const fetchArticles = async () => {
+            const { data, error } = await supabase.from('articles').select('*');
+            if (data) {
+                console.log("Fetched articles:", data);
+                setArticles(data);
+            }
+            if (error) {
+                console.error("Error fetching articles:", error);
+            }
+        };
+        fetchArticles();
+    }, []);
 
     const booksData = [
         { title: "Book 1", description: "Description of Book 1" },
@@ -55,11 +73,20 @@ export default function Resources() {
             case 'articles':
                 return (
                     <div className={commonGridClass}>
-                        {articlesData.map((article, index) => (
-                            <Card key={index} className="p-4">
-                                <h3 className="font-bold">{article.title}</h3>
-                                <p>{article.description}</p>
-                            </Card>
+                        {articles.map((article, index) => (
+                            <a href={article.link} target="_blank" rel="noopener noreferrer">
+                                <Card key={index} className="p-2 md:p-3">
+                                    <h3 className="font-bold text-sm md:text-base">{article.title}</h3>
+                                    <p className="text-xs md:text-sm">{article.description}</p>
+                                    {article.image && (
+                                        <img
+                                            src={article.image}
+                                            alt={article.title}
+                                            className="w-full h-auto object-cover"
+                                        />
+                                    )}
+                                </Card>
+                            </a>
                         ))}
                     </div>
                 );

@@ -49,6 +49,7 @@ export default function Questions() {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedTag, setSelectedTag] = useState<string | null>(null);
     const [isQuestionFormOpen, setIsQuestionFormOpen] = useState(false);
+    const [isLoggedIn, setIsLoggedIn] = useState(false); // Simulating user login state
 
     const filteredQuestions = dummyQuestions.filter(question => {
         const matchesSearch = question.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -123,13 +124,12 @@ export default function Questions() {
                                     <div className="flex gap-4">
                                         {/* Voting */}
                                         <div className="flex flex-col items-center gap-2">
-                                            <Button variant="ghost" size="sm">
-                                                <ArrowUpCircle className="h-6 w-6 text-gray-500 hover:text-[#FF4D00]" />
-                                            </Button>
+                                            {isLoggedIn && (
+                                                <Button variant="ghost" size="sm">
+                                                    <ArrowUpCircle className="h-6 w-6 text-gray-500 hover:text-[#FF4D00]" />
+                                                </Button>
+                                            )}
                                             <span className="font-bold">{question.votes}</span>
-                                            <Button variant="ghost" size="sm">
-                                                <ArrowDownCircle className="h-6 w-6 text-gray-500 hover:text-[#5900B3]" />
-                                            </Button>
                                         </div>
 
                                         {/* Question Content */}
@@ -159,10 +159,12 @@ export default function Questions() {
                                                     <span>Asked by {question.author}</span>
                                                     <span>{question.date}</span>
                                                 </div>
-                                                <div className="flex items-center gap-2">
-                                                    <MessageCircle className="h-5 w-5" />
-                                                    <span>{question.answers} answers</span>
-                                                </div>
+                                                {isLoggedIn && (
+                                                    <div className="flex items-center gap-2">
+                                                        <MessageCircle className="h-5 w-5" />
+                                                        <span>{question.answers} answers</span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
